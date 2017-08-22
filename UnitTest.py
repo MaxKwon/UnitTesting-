@@ -27,11 +27,10 @@ class GearPickup:
         self.free_speed = 18730
         # Free Current in Amps
         self.free_current = 0.7
-        
+        #gear ratio
         self.G = 20
-        
+        #Moment of Inertia
         self.J = .1
-        
         # Resistance of the motor
         self.R = 12.0 / self.stall_current
         # Motor velocity constant
@@ -43,6 +42,8 @@ class GearPickup:
     def getAcceleration(self, voltage, velocity):
        
        acc = (self.Kt * ((self.G * voltage) - (self.G * self.G * velocity)))/(self.J * self.Kv * self.R)
+       
+       #acc = (.00529 * ((20 * voltage) - (20 * 20 * velocity)))/(.1 * 164 * .00895)
         
        return acc  
    
@@ -111,7 +112,7 @@ class ControlSimulator:
                 
             
             positions.append(position)
-            #outputs.append(output_voltage)
+            outputs.append(acceleration)
             times.append(time)
             
             last_error = error
