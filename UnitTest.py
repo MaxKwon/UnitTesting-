@@ -10,10 +10,11 @@ import numpy as np
 import matplotlib.pyplot as plt # plotting package
 
 #dt in seconds
-time_step = .01 #10 milliseconds
+controller_time_step = .01 #10 milliseconds
+sim_time_step = .000001
 
 #time in seconds
-time_sweep = 10
+total_time = 10
 
 class GearPickup:
     
@@ -22,35 +23,37 @@ class GearPickup:
         # Stall Torque in N m
         self.stall_torque = 0.71
         # Stall Current in Amps
-        self.stall_current = 134
+        self.stall_current = 134.0
         # Free Speed in RPM
-        self.free_speed = 18730
+        self.free_speed = 18730.0
         # Free Current in Amps
         self.free_current = 0.7
         #gear ratio
-        self.G = 20
+        self.G = 20.0
         #Moment of Inertia
         self.J = .1
         # Resistance of the motor
-        self.R = 12.0 / self.stall_current
+        self.R = .00895
         # Motor velocity constant
-        self.Kv = ((self.free_speed / 60.0 * 2.0 * np.pi) / (12.0 - self.R * self.free_current))
+        self.Kv = 164.0
         # Torque constant
-        self.Kt = self.stall_torque / self.stall_current
-
+        self.Kt = .00529
+        
     
     def getAcceleration(self, voltage, velocity):
        
-       acc = (self.Kt * ((self.G * voltage) - (self.G * self.G * velocity)))/(self.J * self.Kv * self.R)
+       #acc = (self.Kt * ((self.G * voltage) - (self.G * self.G * velocity)))/(self.J * self.Kv * self.R)
        
        #acc = (.00529 * ((20 * voltage) - (20 * 20 * velocity)))/(.1 * 164 * .00895)
+       
+       acc = (((-self.G**2 * self.Kt)/(self.J * self.Kv * self.R)) * velocity) + (((self.Kt * self.G)/(self.J * self.Kv * self.R)) * voltage)
         
        return acc  
    
     def getConstants(self):
         
-        print(self.Kv)
-        print(self.Kt)
+        print("Kv: ", self.Kv)
+        print("Kt: ", self.Kt)
     
 
 class ControlSimulator:
@@ -62,11 +65,11 @@ class ControlSimulator:
         self.max_saturation = 12
         self.min_saturation = -12
         
-        self.Kp = 50
+        self.Kp = 40
         self.Ki = 0
-        self.Kd = 5
+        self.Kd = 0
         
-    def simulate(self, time_dt, total_time, step):
+    def controlLoop(self, sim_time_step, controller_time_step, total_time, step):
         
         time = 0
         
@@ -88,11 +91,6 @@ class ControlSimulator:
         
         while (time <= total_time):
             
-            acceleration = self.gearPickup.getAcceleration(output_voltage, velocity)
-            
-            velocity += acceleration * time_step
-            position += velocity * time_step
-            
             error = step - position 
             
             i += error
@@ -103,35 +101,58 @@ class ControlSimulator:
             D = self.Kd * d
             
             output_voltage = P + I + D
-            
+    
             if (output_voltage > self.max_saturation):
                 output_voltage = self.max_saturation
                 
             if (output_voltage < self.min_saturation):
                 output_voltage = self.min_saturation
                 
-            
             positions.append(position)
-            outputs.append(acceleration)
             times.append(time)
             
             last_error = error
             
-            time += time_dt
+            time += controller_time_step
+            
+            outputs = self.simulate(controller_time_step, sim_time_step, output_voltage, velocity)
+            position += outputs[0] 
+            velocity = outputs[1]
             
         plt.title("Position")
         plt.plot(times, positions, 'r')
-        plt.plot(times, outputs, 'b')
         
+    def simulate(self, total_dt, sim_dt, voltage, velocity_init):
+        
+        time = 0
+        
+        acceleration = 0
+        velocity = velocity_init
+        position = 0
+        
+        outputs = [0,0]
+        
+        while (time <= total_dt):
+            
+            acceleration = self.gearPickup.getAcceleration(voltage, velocity)
+            
+            velocity += acceleration * sim_dt
+            position += velocity * sim_dt
+            
+            time += sim_dt
+            
+        outputs = [position, velocity]
+            
+        return outputs
+        
+       
 
-
-    
 gearPickup = GearPickup()
 
 gearPickup.getConstants()
 
 simulation = ControlSimulator(gearPickup)
 
-simulation.simulate(time_step, time_sweep, .7)
+simulation.controlLoop(sim_time_step, controller_time_step, total_time, .7)
     
 
