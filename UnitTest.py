@@ -39,7 +39,6 @@ class GearPickup:
         # Torque constant
         self.Kt = .00529
         
-    
     def getAcceleration(self, voltage, velocity):
       
        acc = (((-self.G**2 * self.Kt * velocity)/(self.J * self.Kv * self.R))) + (((self.Kt * self.G  * voltage)/(self.J * self.R)))
@@ -50,7 +49,8 @@ class GearPickup:
         
         print("Kv: ", self.Kv)
         print("Kt: ", self.Kt)
-    
+        
+        
 
 class ControlSimulator:
     
@@ -115,6 +115,7 @@ class ControlSimulator:
             
         plt.title("Position")
         plt.plot(times, positions, 'r')
+        plt.savefig('UnitTest.jpg')
         
     def simulate(self, total_dt, sim_dt, voltage, velocity_init):
         
