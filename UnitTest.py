@@ -31,9 +31,9 @@ class GearPickup:
         #gear ratio
         self.G = 20.0
         #Moment of Inertia
-        self.J = .1
+        self.J = .01
         # Resistance of the motor
-        self.R = .00895
+        self.R = .0895
         # Motor velocity constant
         self.Kv = 164.0
         # Torque constant
@@ -41,12 +41,8 @@ class GearPickup:
         
     
     def getAcceleration(self, voltage, velocity):
-       
-       #acc = (self.Kt * ((self.G * voltage) - (self.G * self.G * velocity)))/(self.J * self.Kv * self.R)
-       
-       #acc = (.00529 * ((20 * voltage) - (20 * 20 * velocity)))/(.1 * 164 * .00895)
-       
-       acc = (((-self.G**2 * self.Kt)/(self.J * self.Kv * self.R)) * velocity) + (((self.Kt * self.G)/(self.J * self.Kv * self.R)) * voltage)
+      
+       acc = (((-self.G**2 * self.Kt * velocity)/(self.J * self.Kv * self.R))) + (((self.Kt * self.G  * voltage)/(self.J * self.R)))
         
        return acc  
    
@@ -65,9 +61,9 @@ class ControlSimulator:
         self.max_saturation = 12
         self.min_saturation = -12
         
-        self.Kp = 40
+        self.Kp = 3 #2000
         self.Ki = 0
-        self.Kd = 0
+        self.Kd = .15  #30
         
     def controlLoop(self, sim_time_step, controller_time_step, total_time, step):
         
@@ -75,7 +71,6 @@ class ControlSimulator:
         
         position = 0
         velocity = 0
-        acceleration = 0
         
         output_voltage = 0
         
@@ -84,7 +79,6 @@ class ControlSimulator:
         
         positions = []
         times = []
-        outputs = []
         
         i = 0
         d =0
