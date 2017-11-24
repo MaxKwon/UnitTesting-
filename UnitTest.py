@@ -8,6 +8,7 @@ Created on Thu Aug 17 00:34:32 2017
 
 import numpy as np
 import matplotlib.pyplot as plt # plotting package
+import profile as prof
 
 #dt in seconds
 controller_time_step = .01 #10 milliseconds
@@ -19,7 +20,6 @@ total_time = 10
 class GearPickup:
     
     def __init__(self):
-        
         # Stall Torque in N m
         self.stall_torque = 0.71
         # Stall Current in Amps
@@ -31,7 +31,7 @@ class GearPickup:
         #gear ratio
         self.G = 20.0
         #Moment of Inertia
-        self.J = .01
+        self.J = .41
         # Resistance of the motor
         self.R = .0895
         # Motor velocity constant
@@ -58,34 +58,49 @@ class ControlSimulator:
         
         self.gearPickup = GearPickup
         
+        #saturated max and min voltage outputs to motor
         self.max_saturation = 12
         self.min_saturation = -12
         
-        self.Kp = 3 #2000
+        #PID Gains set here
+        self.Kp = 2
         self.Ki = 0
-        self.Kd = .15  #30
+        self.Kd = .15
         
-    def controlLoop(self, sim_time_step, controller_time_step, total_time, step):
+    #main control loop that runs the PID controller    
+    def controlLoop(self, sim_time_step, controller_time_step, total_time, profile):
         
         time = 0
         
         position = 0
         velocity = 0
         
+        #output to the motor
         output_voltage = 0
         
         error = 0
         last_error = 0
         
+        #collection of the position of the appendage along with the time it was there for graphing
         positions = []
         times = []
         
         i = 0
         d =0
+    
+        #set the first target to the first reference in the generated motion profile
+        ref = profile[0]
         
+        index = 0
+        
+        print(len(profile))
+        
+        #control loop
         while (time <= total_time):
             
-            error = step - position 
+            ref = profile[index]
+            
+            error = ref - position 
             
             i += error
             d = error - last_error
@@ -94,7 +109,7 @@ class ControlSimulator:
             I = self.Ki * i
             D = self.Kd * d
             
-            output_voltage = P + I + D
+            output_voltage = P + I + D 
     
             if (output_voltage > self.max_saturation):
                 output_voltage = self.max_saturation
@@ -113,10 +128,14 @@ class ControlSimulator:
             position += outputs[0] 
             velocity = outputs[1]
             
+            if (index < (len(profile) - 1)):
+                index += 1
+            
         plt.title("Position")
         plt.plot(times, positions, 'r')
         plt.savefig('UnitTest.jpg')
         
+    #integrator that solves for position and velocity from acceleration getter method
     def simulate(self, total_dt, sim_dt, voltage, velocity_init):
         
         time = 0
@@ -139,8 +158,10 @@ class ControlSimulator:
         outputs = [position, velocity]
             
         return outputs
-        
-       
+    
+profiler = prof.TrapazoidalProfile(.1, 5, .01)
+
+profile = profiler.generateProfile(.7)
 
 gearPickup = GearPickup()
 
@@ -148,6 +169,6 @@ gearPickup.getConstants()
 
 simulation = ControlSimulator(gearPickup)
 
-simulation.controlLoop(sim_time_step, controller_time_step, total_time, .7)
+simulation.controlLoop(sim_time_step, controller_time_step, total_time, profile)
     
 
